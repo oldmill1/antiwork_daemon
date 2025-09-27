@@ -1,8 +1,12 @@
 import SwiftUI
+import Vision
+import AppKit
 
 struct ContentView: View {
     @State private var screenInfo = ""
     @State private var showImage = false
+    @State private var detectedText = ""
+    @State private var visionResults: [VNRecognizedTextObservation] = []
     
     var body: some View {
         VStack(spacing: 20) {
@@ -24,6 +28,24 @@ struct ContentView: View {
                     .frame(maxWidth: 300, maxHeight: 200)
                     .cornerRadius(8)
                     .shadow(radius: 4)
+            }
+            
+            // Display Vision analysis results
+            if !detectedText.isEmpty {
+                ScrollView {
+                    Text("Vision Analysis Results:")
+                        .font(.headline)
+                        .padding(.top)
+                    
+                    Text(detectedText)
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundColor(.secondary)
+                        .padding()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .frame(maxHeight: 150)
+                .background(Color.gray.opacity(0.1))
+                .cornerRadius(8)
             }
             
             Button("Move Mouse to Top Left") {
@@ -49,8 +71,14 @@ struct ContentView: View {
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
+            
+            Button("Analyze Image with Vision") {
+                analyzeImageWithVision()
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
         }
-        .frame(width: 400, height: 600)
+        .frame(width: 400, height: 800)
         .padding()
         .onAppear {
             updateScreenInfo()
@@ -131,6 +159,77 @@ struct ContentView: View {
     
     func testVision() {
         print("Image Test To Be Continued")
+    }
+    
+    func analyzeImageWithVision() {
+        guard let image = NSImage(named: "test_screenshot") else {
+            print("Could not load test_screenshot image")
+            return
+        }
+        
+        guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+            print("Could not convert NSImage to CGImage")
+            return
+        }
+        
+        let request = VNRecognizeTextRequest { request, error in
+            if let error = error {
+                print("Vision request error: \(error)")
+                return
+            }
+            
+            guard let observations = request.results as? [VNRecognizedTextObservation] else {
+                print("No text observations found")
+                return
+            }
+            
+            DispatchQueue.main.async {
+                self.visionResults = observations
+                self.processVisionResults(observations)
+            }
+        }
+        
+        // Configure the request for better accuracy
+        request.recognitionLevel = .accurate
+        request.usesLanguageCorrection = true
+        
+        let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
+        
+        do {
+            try handler.perform([request])
+        } catch {
+            print("Failed to perform Vision request: \(error)")
+        }
+    }
+    
+    func processVisionResults(_ observations: [VNRecognizedTextObservation]) {
+        var allText = ""
+        var sidebarItems: [(String, CGRect)] = []
+        
+        for observation in observations {
+            guard let topCandidate = observation.topCandidates(1).first else { continue }
+            
+            let text = topCandidate.string
+            let boundingBox = observation.boundingBox
+            
+            allText += "\(text) at \(boundingBox)\n"
+            
+            // Look for sidebar items (left side of image, roughly 0-0.2 x coordinate)
+            if boundingBox.minX < 0.2 {
+                sidebarItems.append((text, boundingBox))
+                print("Sidebar item found: '\(text)' at normalized coordinates: \(boundingBox)")
+            }
+        }
+        
+        detectedText = allText
+        
+        // Print specific sidebar items we're looking for
+        print("\n=== SIDEBAR ANALYSIS ===")
+        for (text, rect) in sidebarItems {
+            print("Text: '\(text)'")
+            print("Normalized coordinates: \(rect)")
+            print("---")
+        }
     }
     
 }
