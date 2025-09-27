@@ -63,48 +63,19 @@ class AutomationController: ObservableObject {
     
     // MARK: - URL and Tab Management
     
-    func openSlackEnvironment() {
-        print("🎯 Setting up Slack environment...")
-        
-        // Step 1: Check if Chrome is running
-        if !isChromeRunning() {
-            print("Chrome not running, starting it...")
-            startChrome()
-            // Give Chrome time to start
-            Thread.sleep(forTimeInterval: 3.0)
-        } else {
-            print("Chrome is already running")
+    func openURL(_ urlString: String) {
+        guard let url = URL(string: urlString) else {
+            print("❌ Invalid URL: \(urlString)")
+            return
         }
         
-        // Step 2: Check if Slack tab is open
-        if isSlackTabOpen() {
-            print("Slack tab found, switching to it...")
-            switchToSlackTab()
-        } else {
-            print("Slack tab not found, opening new tab...")
-            openSlackTab()
-        }
-        
-        print("✅ Slack environment ready!")
+        NSWorkspace.shared.open(url)
+        print("🌐 Opening URL: \(urlString)")
     }
     
-    func isSlackTabOpen() -> Bool {
-        // For now, assume we need to open a new tab
-        // We'll implement proper tab detection later
-        return false
-    }
-    
-    func openSlackTab() {
-        // Use NSWorkspace to open the URL directly
-        let slackURL = URL(string: "https://app.slack.com/client/T069D5CG1/C03K10RTDLL")!
-        NSWorkspace.shared.open(slackURL)
-        print("📱 Opening Slack tab...")
-    }
-    
-    func switchToSlackTab() {
-        // For now, just open a new tab
-        openSlackTab()
-        print("🔄 Opening new Slack tab...")
+    func openURL(_ url: URL) {
+        NSWorkspace.shared.open(url)
+        print("🌐 Opening URL: \(url.absoluteString)")
     }
     
     // MARK: - Screen Information

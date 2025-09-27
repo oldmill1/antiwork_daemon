@@ -5,7 +5,18 @@ import AppKit
 struct ContentView: View {
     @StateObject private var visionManager = VisionManager()
     @StateObject private var automationController = AutomationController()
+    @StateObject private var slackManager: SlackManager
     @State private var showImage = false
+    
+    init() {
+        let visionManager = VisionManager()
+        let automationController = AutomationController()
+        let slackManager = SlackManager(automationController: automationController, visionManager: visionManager)
+        
+        _visionManager = StateObject(wrappedValue: visionManager)
+        _automationController = StateObject(wrappedValue: automationController)
+        _slackManager = StateObject(wrappedValue: slackManager)
+    }
     
     var body: some View {
         VStack(spacing: 20) {
@@ -78,7 +89,7 @@ struct ContentView: View {
             .controlSize(.large)
             
             Button("Go To Home Button") {
-                goToHomeButton()
+                slackManager.goToHome()
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
@@ -89,10 +100,15 @@ struct ContentView: View {
             .buttonStyle(.bordered)
             
             Button("Open Slack Environment") {
-                automationController.openSlackEnvironment()
+                slackManager.openSlackEnvironment()
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
+            
+            Button("Find Home Button") {
+                slackManager.findHomeButton()
+            }
+            .buttonStyle(.bordered)
         }
         .frame(width: 400, height: 800)
         .padding()
@@ -113,19 +129,6 @@ struct ContentView: View {
     
     func testVision() {
         print("Image Test To Be Continued")
-    }
-    
-    func goToHomeButton() {
-        if let homeCoords = visionManager.getHomeButtonCoordinates() {
-            automationController.moveMouse(to: homeCoords)
-            print("🏠 Moving mouse to Home button at: \(homeCoords)")
-        } else {
-            print("❌ Home button coordinates not found. Please run Vision analysis first!")
-            // Fallback to manual coordinates if Vision hasn't run yet
-            let fallbackCoords = CGPoint(x: 40, y: 320)
-            automationController.moveMouse(to: fallbackCoords)
-            print("🔄 Using fallback coordinates: \(fallbackCoords)")
-        }
     }
     
 }

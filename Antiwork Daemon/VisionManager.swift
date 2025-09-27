@@ -2,10 +2,27 @@ import SwiftUI
 import Vision
 import AppKit
 
+// MARK: - UI Element Model
+struct UIElement {
+    let text: String
+    let type: ElementType
+    let normalizedRect: CGRect
+    let screenCoordinates: CGPoint
+    let confidence: Float
+}
+
+enum ElementType {
+    case button
+    case text
+    case navigation
+    case input
+    case other
+}
+
 class VisionManager: ObservableObject {
     @Published var detectedText = ""
     @Published var visionResults: [VNRecognizedTextObservation] = []
-    @Published var homeButtonCoordinates: CGPoint? = nil
+    @Published var detectedElements: [UIElement] = []
     
     // MARK: - Image Analysis
     
@@ -51,61 +68,95 @@ class VisionManager: ObservableObject {
     
     func processVisionResults(_ observations: [VNRecognizedTextObservation]) {
         var allText = ""
-        var sidebarItems: [(String, CGRect)] = []
+        var elements: [UIElement] = []
         
         for observation in observations {
             guard let topCandidate = observation.topCandidates(1).first else { continue }
             
             let text = topCandidate.string
             let boundingBox = observation.boundingBox
+            let confidence = topCandidate.confidence
             
             allText += "\(text) at \(boundingBox)\n"
             
-            // Look for sidebar items (left side of image, roughly 0-0.2 x coordinate)
-            if boundingBox.minX < 0.2 {
-                sidebarItems.append((text, boundingBox))
-                print("Sidebar item found: '\(text)' at normalized coordinates: \(boundingBox)")
-                
-                // Specifically look for "Home" button
-                if text.lowercased().contains("home") {
-                    let screenCoordinates = convertToScreenCoordinates(boundingBox)
-                    homeButtonCoordinates = screenCoordinates
-                    print("🏠 HOME BUTTON FOUND!")
-                    print("Normalized: \(boundingBox)")
-                    print("Screen coordinates: \(screenCoordinates)")
-                }
-            }
+            // Determine element type based on text content and position
+            let elementType = classifyElement(text: text, rect: boundingBox)
+            let screenCoordinates = convertToScreenCoordinates(boundingBox)
+            
+            let element = UIElement(
+                text: text,
+                type: elementType,
+                normalizedRect: boundingBox,
+                screenCoordinates: screenCoordinates,
+                confidence: confidence
+            )
+            
+            elements.append(element)
+            
+            print("Element found: '\(text)' (\(elementType)) at \(screenCoordinates)")
         }
         
         detectedText = allText
+        detectedElements = elements
         
-        // Print specific sidebar items we're looking for
-        print("\n=== SIDEBAR ANALYSIS ===")
-        for (text, rect) in sidebarItems {
-            print("Text: '\(text)'")
-            print("Normalized coordinates: \(rect)")
-            print("---")
+        print("\n=== VISION ANALYSIS ===")
+        print("Found \(elements.count) UI elements")
+        for element in elements {
+            print("\(element.type): '\(element.text)' at \(element.screenCoordinates)")
         }
+    }
+    
+    // MARK: - Element Classification
+    
+    private func classifyElement(text: String, rect: CGRect) -> ElementType {
+        let lowerText = text.lowercased()
+        
+        // Generic button detection based on common button words
+        if lowerText.contains("send") || lowerText.contains("post") || 
+           lowerText.contains("reply") || lowerText.contains("share") ||
+           lowerText.contains("like") || lowerText.contains("react") ||
+           lowerText.contains("submit") || lowerText.contains("save") ||
+           lowerText.contains("cancel") || lowerText.contains("ok") ||
+           lowerText.contains("yes") || lowerText.contains("no") {
+            return .button
+        }
+        
+        // Generic input field detection
+        if lowerText.contains("type") || lowerText.contains("enter") ||
+           lowerText.contains("search") || lowerText.contains("filter") ||
+           lowerText.contains("input") || lowerText.contains("field") {
+            return .input
+        }
+        
+        // Generic navigation detection (left side elements)
+        if rect.minX < 0.2 {
+            return .navigation
+        }
+        
+        // Default to text
+        return .text
     }
     
     // MARK: - UI Element Detection
     
-    func findHomeButton(in observations: [VNRecognizedTextObservation]) -> CGPoint? {
-        for observation in observations {
-            guard let topCandidate = observation.topCandidates(1).first else { continue }
-            
-            let text = topCandidate.string
-            let boundingBox = observation.boundingBox
-            
-            // Look for "Home" button in sidebar area
-            if boundingBox.minX < 0.2 && text.lowercased().contains("home") {
-                let screenCoordinates = convertToScreenCoordinates(boundingBox)
-                homeButtonCoordinates = screenCoordinates
-                return screenCoordinates
-            }
+    func findElement(containing text: String, ofType type: ElementType? = nil) -> UIElement? {
+        return detectedElements.first { element in
+            let matchesText = element.text.lowercased().contains(text.lowercased())
+            let matchesType = type == nil || element.type == type
+            return matchesText && matchesType
         }
-        return nil
     }
+    
+    func findElements(ofType type: ElementType) -> [UIElement] {
+        return detectedElements.filter { $0.type == type }
+    }
+    
+    func findElements(in region: CGRect) -> [UIElement] {
+        return detectedElements.filter { element in
+            region.contains(element.screenCoordinates)
+        }
+    }
+    
     
     // MARK: - Coordinate Conversion
     
@@ -143,7 +194,17 @@ class VisionManager: ObservableObject {
         _ = analyzeImage(image)
     }
     
-    func getHomeButtonCoordinates() -> CGPoint? {
-        return homeButtonCoordinates
+    func analyzeImageFromPath(_ path: String) {
+        guard let image = NSImage(contentsOfFile: path) else {
+            print("Could not load image from path: \(path)")
+            return
+        }
+        
+        _ = analyzeImage(image)
     }
+    
+    func getElementCoordinates(containing text: String, ofType type: ElementType? = nil) -> CGPoint? {
+        return findElement(containing: text, ofType: type)?.screenCoordinates
+    }
+    
 }
