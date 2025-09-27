@@ -84,6 +84,17 @@ struct ContentView: View {
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
+            
+            Button("Test Chrome Detection") {
+                testChromeDetection()
+            }
+            .buttonStyle(.bordered)
+            
+            Button("Open Slack Environment") {
+                openSlackEnvironment()
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
         }
         .frame(width: 400, height: 800)
         .padding()
@@ -269,6 +280,116 @@ struct ContentView: View {
         print("Converted point: (\(x), \(y))")
         
         return CGPoint(x: x, y: y)
+    }
+    
+    // MARK: - AppleScript Helper
+    func runAppleScript(_ script: String) -> String? {
+        let process = Process()
+        let pipe = Pipe()
+        process.launchPath = "/usr/bin/osascript"
+        process.arguments = ["-e", script]
+        process.standardOutput = pipe
+        process.launch()
+        process.waitUntilExit()
+
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        return String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    
+    // MARK: - Chrome Management
+    func isChromeRunning() -> Bool {
+        // Use NSWorkspace to check if Chrome is running
+        let runningApps = NSWorkspace.shared.runningApplications
+        let chromeApps = runningApps.filter { $0.bundleIdentifier == "com.google.Chrome" }
+        
+        let isRunning = !chromeApps.isEmpty
+        print("Chrome running check result: '\(isRunning)'")
+        if isRunning {
+            print("Chrome bundle ID found: \(chromeApps.first?.bundleIdentifier ?? "unknown")")
+        }
+        return isRunning
+    }
+    
+    func startChrome() {
+        // Use NSWorkspace to launch Chrome
+        let chromeURL = URL(fileURLWithPath: "/Applications/Google Chrome.app")
+        do {
+            try NSWorkspace.shared.launchApplication(at: chromeURL, options: [], configuration: [:])
+            print("🚀 Starting Google Chrome... Success!")
+        } catch {
+            print("🚀 Starting Google Chrome... Error: \(error)")
+        }
+    }
+    
+    func isSlackTabOpen() -> Bool {
+        // For now, assume we need to open a new tab
+        // We'll implement proper tab detection later
+        return false
+    }
+    
+    func openSlackTab() {
+        // Use NSWorkspace to open the URL directly
+        let slackURL = URL(string: "https://app.slack.com/client/T069D5CG1/C03K10RTDLL")!
+        NSWorkspace.shared.open(slackURL)
+        print("📱 Opening Slack tab...")
+    }
+    
+    func switchToSlackTab() {
+        // For now, just open a new tab
+        openSlackTab()
+        print("🔄 Opening new Slack tab...")
+    }
+    
+    func openSlackEnvironment() {
+        print("🎯 Setting up Slack environment...")
+        
+        // Step 1: Check if Chrome is running
+        if !isChromeRunning() {
+            print("Chrome not running, starting it...")
+            startChrome()
+            // Give Chrome time to start
+            Thread.sleep(forTimeInterval: 3.0)
+        } else {
+            print("Chrome is already running")
+        }
+        
+        // Step 2: Check if Slack tab is open
+        if isSlackTabOpen() {
+            print("Slack tab found, switching to it...")
+            switchToSlackTab()
+        } else {
+            print("Slack tab not found, opening new tab...")
+            openSlackTab()
+        }
+        
+        print("✅ Slack environment ready!")
+    }
+    
+    func testChromeDetection() {
+        print("🔍 Testing Chrome detection...")
+        
+        // Test NSWorkspace approach
+        let runningApps = NSWorkspace.shared.runningApplications
+        print("Total running apps: \(runningApps.count)")
+        
+        // Show all Chrome-related apps
+        let chromeApps = runningApps.filter { 
+            $0.bundleIdentifier?.contains("Chrome") == true || 
+            $0.localizedName?.contains("Chrome") == true 
+        }
+        print("Chrome-related apps found: \(chromeApps.count)")
+        for app in chromeApps {
+            print("  - \(app.localizedName ?? "Unknown"): \(app.bundleIdentifier ?? "No bundle ID")")
+        }
+        
+        let isRunning = isChromeRunning()
+        print("Chrome is running: \(isRunning)")
+        
+        if isRunning {
+            print("✅ Chrome is detected as running")
+        } else {
+            print("❌ Chrome is not running")
+        }
     }
     
     func goToHomeButton() {
