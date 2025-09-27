@@ -11,7 +11,7 @@ import SwiftUI
 struct Antiwork_DaemonApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            LotusView()
         }
     }
 }

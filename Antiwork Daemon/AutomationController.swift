@@ -1,10 +1,11 @@
 import SwiftUI
 import AppKit
+import ScreenCaptureKit
 
 class AutomationController: ObservableObject {
     @Published var screenInfo = ""
     
-    // MARK: - Mouse Control
+    // MARK: - Mouse Controlgma
     
     func moveMouse(to point: CGPoint) {
         CGWarpMouseCursorPosition(point)
@@ -149,6 +150,107 @@ class AutomationController: ObservableObject {
                 // moveMouse(to: point)
                 // Thread.sleep(forTimeInterval: 0.5)
             }
+        }
+    }
+    
+    // MARK: - Screenshot Capture
+    
+    func takeScreenshot() -> String? {
+        // Create screenshots directory in user's Documents folder
+        let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.path ?? "/Users/ataxali/Documents"
+        let screenshotsDir = "\(documentsPath)/AntiworkDaemon_Screenshots"
+        
+        // Create directory if it doesn't exist
+        let fileManager = FileManager.default
+        if !fileManager.fileExists(atPath: screenshotsDir) {
+            do {
+                try fileManager.createDirectory(atPath: screenshotsDir, withIntermediateDirectories: true, attributes: nil)
+                print("📁 Created screenshots directory: \(screenshotsDir)")
+            } catch {
+                print("❌ Failed to create screenshots directory: \(error)")
+                return nil
+            }
+        }
+        
+        // Generate filename with timestamp
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd_HH-mm-ss"
+        let timestamp = formatter.string(from: Date())
+        let filename = "screenshot_\(timestamp).png"
+        let filePath = "\(screenshotsDir)/\(filename)"
+        
+        // Take screenshot using ScreenCaptureKit
+        let semaphore = DispatchSemaphore(value: 0)
+        var screenshotData: Data?
+        var errorMessage: String?
+        
+        Task {
+            do {
+                // Get available content
+                let availableContent = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+                
+                // Find the main display
+                guard let mainDisplay = availableContent.displays.first else {
+                    errorMessage = "No displays found"
+                    semaphore.signal()
+                    return
+                }
+                
+                // Create content filter
+                let contentFilter = SCContentFilter(display: mainDisplay, excludingWindows: [])
+                
+                // Create capture configuration
+                let config = SCStreamConfiguration()
+                config.width = Int(mainDisplay.width)
+                config.height = Int(mainDisplay.height)
+                config.minimumFrameInterval = CMTime(value: 1, timescale: 1)
+                config.queueDepth = 1
+                
+                // Capture the screen
+                let cgImage = try await SCScreenshotManager.captureImage(contentFilter: contentFilter, configuration: config)
+                
+                // Convert CGImage to NSImage
+                let nsImage = NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
+                
+                // Convert to PNG data
+                guard let tiffData = nsImage.tiffRepresentation,
+                      let bitmapRep = NSBitmapImageRep(data: tiffData),
+                      let pngData = bitmapRep.representation(using: .png, properties: [:]) else {
+                    errorMessage = "Failed to convert image to PNG"
+                    semaphore.signal()
+                    return
+                }
+                
+                screenshotData = pngData
+                semaphore.signal()
+                
+            } catch {
+                errorMessage = "Screenshot failed: \(error.localizedDescription)"
+                semaphore.signal()
+            }
+        }
+        
+        // Wait for the async operation to complete
+        semaphore.wait()
+        
+        if let error = errorMessage {
+            print("❌ \(error)")
+            return nil
+        }
+        
+        guard let data = screenshotData else {
+            print("❌ No screenshot data received")
+            return nil
+        }
+        
+        // Save the screenshot
+        do {
+            try data.write(to: URL(fileURLWithPath: filePath))
+            print("📸 Screenshot saved: \(filePath)")
+            return filePath
+        } catch {
+            print("❌ Failed to save screenshot: \(error)")
+            return nil
         }
     }
     
