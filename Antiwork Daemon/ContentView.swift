@@ -7,6 +7,7 @@ struct ContentView: View {
     @State private var showImage = false
     @State private var detectedText = ""
     @State private var visionResults: [VNRecognizedTextObservation] = []
+    @State private var homeButtonCoordinates: CGPoint? = nil
     
     var body: some View {
         VStack(spacing: 20) {
@@ -74,6 +75,12 @@ struct ContentView: View {
             
             Button("Analyze Image with Vision") {
                 analyzeImageWithVision()
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            
+            Button("Go To Home Button") {
+                goToHomeButton()
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
@@ -218,6 +225,15 @@ struct ContentView: View {
             if boundingBox.minX < 0.2 {
                 sidebarItems.append((text, boundingBox))
                 print("Sidebar item found: '\(text)' at normalized coordinates: \(boundingBox)")
+                
+                // Specifically look for "Home" button
+                if text.lowercased().contains("home") {
+                    let screenCoordinates = convertNormalizedToScreenCoordinates(boundingBox)
+                    homeButtonCoordinates = screenCoordinates
+                    print("🏠 HOME BUTTON FOUND!")
+                    print("Normalized: \(boundingBox)")
+                    print("Screen coordinates: \(screenCoordinates)")
+                }
             }
         }
         
@@ -229,6 +245,42 @@ struct ContentView: View {
             print("Text: '\(text)'")
             print("Normalized coordinates: \(rect)")
             print("---")
+        }
+    }
+    
+    func convertNormalizedToScreenCoordinates(_ normalizedRect: CGRect) -> CGPoint {
+        guard let screen = NSScreen.main else {
+            print("Could not get main screen")
+            return CGPoint.zero
+        }
+        
+        let screenFrame = screen.frame
+        let screenWidth = screenFrame.width
+        let screenHeight = screenFrame.height
+        
+        // Convert normalized coordinates (0-1) to screen coordinates
+        // Vision coordinates are bottom-left origin, macOS is top-left origin
+        let x = normalizedRect.midX * screenWidth
+        let y = (1.0 - normalizedRect.midY) * screenHeight
+        
+        print("Converting coordinates:")
+        print("Screen size: \(screenWidth) x \(screenHeight)")
+        print("Normalized rect: \(normalizedRect)")
+        print("Converted point: (\(x), \(y))")
+        
+        return CGPoint(x: x, y: y)
+    }
+    
+    func goToHomeButton() {
+        if let homeCoords = homeButtonCoordinates {
+            CGWarpMouseCursorPosition(homeCoords)
+            print("🏠 Moving mouse to Home button at: \(homeCoords)")
+        } else {
+            print("❌ Home button coordinates not found. Please run Vision analysis first!")
+            // Fallback to manual coordinates if Vision hasn't run yet
+            let fallbackCoords = CGPoint(x: 40, y: 320)
+            CGWarpMouseCursorPosition(fallbackCoords)
+            print("🔄 Using fallback coordinates: \(fallbackCoords)")
         }
     }
     
