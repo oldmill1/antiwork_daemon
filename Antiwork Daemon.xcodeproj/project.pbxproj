@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		FDC290AA2E888A1F001DEC3F /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = FDC290A92E888A17001DEC3F /* README.md */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		FDC2908D2E8776CD001DEC3F /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -27,6 +31,7 @@
 		FDC2907E2E8776CC001DEC3F /* Antiwork Daemon.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Antiwork Daemon.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		FDC2908C2E8776CD001DEC3F /* Antiwork DaemonTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Antiwork DaemonTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		FDC290962E8776CD001DEC3F /* Antiwork DaemonUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Antiwork DaemonUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		FDC290A92E888A17001DEC3F /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -75,6 +80,7 @@
 		FDC290752E8776CC001DEC3F = {
 			isa = PBXGroup;
 			children = (
+				FDC290A92E888A17001DEC3F /* README.md */,
 				FDC290802E8776CC001DEC3F /* Antiwork Daemon */,
 				FDC2908F2E8776CD001DEC3F /* Antiwork DaemonTests */,
 				FDC290992E8776CD001DEC3F /* Antiwork DaemonUITests */,
@@ -212,6 +218,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FDC290AA2E888A1F001DEC3F /* README.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
