@@ -38,6 +38,8 @@ struct LotusView: View {
             print("📸 Taking screenshot after Slack load...")
             if let screenshotPath = self.automationController.takeScreenshot() {
                 print("✅ Screenshot saved to: \(screenshotPath)")
+                // Show red dot indicator in menu bar
+                NotificationCenter.default.post(name: .showScreenshotIndicator, object: nil)
             } else {
                 print("❌ Failed to take screenshot")
             }

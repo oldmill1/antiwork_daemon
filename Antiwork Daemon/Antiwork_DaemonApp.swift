@@ -9,9 +9,20 @@ import SwiftUI
 
 @main
 struct Antiwork_DaemonApp: App {
+    @StateObject private var menuBarManager = MenuBarManager()
+    
     var body: some Scene {
         WindowGroup {
             LotusView()
         }
+        .windowStyle(.hiddenTitleBar)
+        .windowResizability(.contentSize)
+        
+        WindowGroup("Demo Window") {
+            DemoView()
+        }
+        .windowStyle(.hiddenTitleBar)
+        .windowResizability(.contentSize)
+        .defaultPosition(.center)
     }
 }
